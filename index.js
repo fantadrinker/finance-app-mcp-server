@@ -1,4 +1,5 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -10,28 +11,46 @@ const server = new McpServer({
 })
 
 const ddbClient = new DynamoDBClient({})
+const docClient = DynamoDBDocumentClient.from(ddbClient)
+const TABLE_NAME = process.env.DDB_TABLE_NAME
+const USER = process.env.USER_ID
+
+console.log(111, TABLE_NAME, USER)
 
 server.registerTool("get all activities", {
   title: "Get Activities Tool",
   description: "For given start and end date, return the list of activities",
   inputSchema: { startDate: z.string(), endDate: z.string() },
-}, ({startDate, endDate}) => {
+}, async ({startDate, endDate}) => {
+
+  const command = new QueryCommand({
+    TableName: TABLE_NAME,
+    KeyConditionExpression: '#ddbUser = :user AND sk between :start_date and :end_date',
+    ExpressionAttributeValues: {
+      ':user': USER,
+      ':start_date': startDate,
+      ':end_date': endDate
+    },
+    ExpressionAttributeNames: {
+      '#ddbUser': 'user'
+    }
+  })
+
+  const response = await docClient.send(command)
+  
   return {
-    content: [{
-      type: "text",
-      text: "activity_date: 2025-06-20, amount: $30, description: Loblaws superstore",
-    },{
-      type: "text",
-      text: "activity_date: 2025-06-10, amount: $4, description: paybyphone parking",
-    },{
-      type: "text",
-      text: "activity_date: 2025-05-29, amount: $13.13, description: Netflix",
-    },{
-      type: "text",
-      text: "activity_date: 2025-05-01, amount: $20, description: Loblaws superstore",
-    }]
+    content: (response.Items ?? []).map((item) => {
+      return {
+        type: "text",
+        text: formatItem(item)
+      }
+    })
   }
 })
+
+function formatItem(item) {
+  return `date: ${item.date}, category: ${item.category}, amount: ${item.amount}, description: ${item.description}`
+}
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
