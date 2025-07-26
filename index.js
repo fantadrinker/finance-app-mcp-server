@@ -15,8 +15,6 @@ const docClient = DynamoDBDocumentClient.from(ddbClient)
 const TABLE_NAME = process.env.DDB_TABLE_NAME
 const USER = process.env.USER_ID
 
-console.log(111, TABLE_NAME, USER)
-
 server.registerTool("get all activities", {
   title: "Get Activities Tool",
   description: "For given start and end date, return the list of activities",
@@ -45,6 +43,30 @@ server.registerTool("get all activities", {
         text: formatItem(item)
       }
     })
+  }
+})
+
+server.registerTool("Record Activities tool", {
+  title: "Record Activities Tool",
+  description: "Record activities in json for future use",
+  inputSchema: {
+    activities: z.array(z.object({
+      date: z.string(),
+      category: z.string(),
+      amount: z.number(),
+      description: z.string(),
+    }))
+  }
+}, async ({activities}) => {
+  console.log(222, activities)
+  // todo: implement create activity
+  return {
+    content: [
+      {
+        type: "text",
+        text: "success"
+      }
+    ]
   }
 })
 

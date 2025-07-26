@@ -1,14 +1,6 @@
 {
   "globalShortcut": "Ctrl+Space",
   "mcpServers": {
-    "file-system": {
-      "type": "builtin",
-      "name": "fs",
-      "options": {
-        "allowed_directories": ["/Users/yizhicui/Projects"]
-      },
-      "allowedTools": ["read_file", "list_directory"]
-    },
     "activities": {
       "type": "local",
       "command": [

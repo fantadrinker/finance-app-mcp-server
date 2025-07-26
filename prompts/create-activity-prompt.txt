@@ -1,0 +1,1 @@
+Create an activity with date: 2025-02-02, amount: 5, category: transportation, description: parking
