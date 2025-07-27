@@ -1,8 +1,7 @@
-import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, QueryCommand } from "@aws-sdk/lib-dynamodb";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import { getActivities, postActivities, putActivity } from "./src/ddbTable.js";
 
 
 const server = new McpServer({
@@ -10,40 +9,34 @@ const server = new McpServer({
   version: "1.0.0",
 })
 
-const ddbClient = new DynamoDBClient({})
-const docClient = DynamoDBDocumentClient.from(ddbClient)
-const TABLE_NAME = process.env.DDB_TABLE_NAME
-const USER = process.env.USER_ID
-
 server.registerTool("get all activities", {
   title: "Get Activities Tool",
   description: "For given start and end date, return the list of activities",
   inputSchema: { startDate: z.string(), endDate: z.string() },
 }, async ({startDate, endDate}) => {
 
-  const command = new QueryCommand({
-    TableName: TABLE_NAME,
-    KeyConditionExpression: '#ddbUser = :user AND sk between :start_date and :end_date',
-    ExpressionAttributeValues: {
-      ':user': USER,
-      ':start_date': startDate,
-      ':end_date': endDate
-    },
-    ExpressionAttributeNames: {
-      '#ddbUser': 'user'
-    }
-  })
-
-  const response = await docClient.send(command)
-  
-  return {
-    content: (response.Items ?? []).map((item) => {
-      return {
-        type: "text",
-        text: formatItem(item)
-      }
+  try {
+    const items = await getActivities({
+      startDate,
+      endDate,
     })
+    return {
+      content: items.map((item) => {
+        return {
+          type: "text",
+          text: formatItem(item)
+        }
+      })
+    }
+  } catch (e) {
+    return {
+      content: [{
+        type: "text",
+        text: e.stack
+      }]
+    }
   }
+  
 })
 
 server.registerTool("Record Activities tool", {
@@ -58,8 +51,20 @@ server.registerTool("Record Activities tool", {
     }))
   }
 }, async ({activities}) => {
-  console.log(222, activities)
-  // todo: implement create activity
+  try {
+    // await postActivities(activities)
+    await Promise.all(activities.map(putActivity))
+  } catch (e) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: `error: ${e.stack}`
+        }
+      ]
+    }
+  }
+
   return {
     content: [
       {
@@ -71,7 +76,7 @@ server.registerTool("Record Activities tool", {
 })
 
 function formatItem(item) {
-  return `date: ${item.date}, category: ${item.category}, amount: ${item.amount}, description: ${item.description}`
+  return `date: ${item.date?.S}, category: ${item.category?.S}, amount: ${item.amount?.N}, description: ${item.description?.S}`
 }
 
 const transport = new StdioServerTransport();
