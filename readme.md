@@ -2,12 +2,11 @@
 
 This is an MCP server for finance app.
 
-## Usage with Ollama
+## System requirements:
+- npm v10
+- node v22
 
-- install [mcphost](https://github.com/mark3labs/mcphost)
+## Usage with Http Client/Server
 
-- Add a `local.json` file to somewhere in your filesystem following instructions on https://github.com/mark3labs/mcphost
-
-- install ollama and a model that is compatible with tools/function calls
-
-- run mcphost with ollama with `mcphost -m ollama:<model-name> --config <path-to-local.json>`
+- run `node index.js` for server
+- run `node thin-client.js` for  client
